@@ -26,7 +26,7 @@ class Model extends React.Component {
             {this.props.modelName}
           </Col>
           <Col lg={6} md={6} sm={6}>
-            <Config modelName={this.props.modelName}/>
+            <Config modelName={this.props.modelName} cuttable={this.props.cuttable}/>
           </Col>
         </Row>
         <Row>
