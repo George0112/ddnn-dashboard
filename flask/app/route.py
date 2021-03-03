@@ -70,7 +70,7 @@ def get_models_name():
   ret = appApi.list_namespaced_deployment('default')
   names = []
   for i in ret.items:
-    if i.metadata.name == 'dashboard':
+    if i.metadata.name == 'dashboard' or not re.search(".*.....", i.metadta.name):
       continue
     elif re.search(".*-.....", i.metadata.name).group() in names:
       continue

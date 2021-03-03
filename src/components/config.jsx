@@ -1,12 +1,15 @@
 import React from 'react';
 import {Row, Col, ButtonGroup, Button, Modal, Dropdown, Card, ListGroup, DropdownButton} from 'react-bootstrap';
+import CutPoints from './cutPoints';
+import axios from 'axios';
 
 class Config extends React.Component{
   constructor(props){
     super(props);
     this.state = {
       show: false,
-      cutPoints: []
+      cutPoints: [],
+      outputPoints: [-1]
     }
   };
 
@@ -17,6 +20,22 @@ class Config extends React.Component{
   handleClose = () => {
     this.setState({show: false});
   };
+
+  handleSubmit = ()=>{
+    var bodyFormData = new FormData();
+    bodyFormData.append('model', this.props.modelName);
+    bodyFormData.append('cut_points', this.state.cutPoints);
+    bodyFormData.append('output_points', this.state.outputPoints);
+    axios.put('http://dashboard.tesla.cs.nthu.edu.tw:32510/model', bodyFormData)
+    .then(e=>{
+      console.log(e);
+    })
+    .catch(e=>{
+      console.log(e);
+    })
+
+    this.setState({show: false});
+  }
 
   updateCutPoints = (e)=>{
     console.log(e);
@@ -77,11 +96,11 @@ class Config extends React.Component{
 
   render(){
 
-    var cutPoints = this.renderCutPoints(this.state.cutPoints, this.props.cuttable);
+    // var cutPoints = this.renderCutPoints(this.state.cutPoints, this.props.cuttable);
 
     return(
-      <div className='justify-content-end'>
-        <Button className='float-right' variant="primary" onClick={this.handleShow}>
+      <>
+        <Button className='float-left' variant="primary" onClick={this.handleShow}>
           Config
         </Button>
 
@@ -89,17 +108,20 @@ class Config extends React.Component{
           <Modal.Header closeButton>
             <Modal.Title>{this.props.modelName}</Modal.Title>
           </Modal.Header>
-          <Modal.Body>{cutPoints}</Modal.Body>
+          <Modal.Body>
+            <CutPoints cutPoints={this.state.cutPoints} modelName={this.props.modelName} 
+            deleteCutPoint={this.deleteCutPoint} updateCutPoints={this.updateCutPoints}/>
+          </Modal.Body>
           <Modal.Footer>
             <Button variant="secondary" onClick={this.handleClose}>
               Close
             </Button>
-            <Button variant="primary" onClick={this.handleClose}>
+            <Button variant="primary" onClick={this.handleSubmit}>
               Save Changes
             </Button>
           </Modal.Footer>
         </Modal>
-      </div>
+      </>
     )
   }
 }

@@ -2,62 +2,69 @@ import logo from './logo.svg';
 import './App.css';
 import { Container, Row, Col, 
   Navbar, Nav, NavDropdown, Form, FormControl,
-  Button, ButtonGroup} from 'react-bootstrap';
+  Button, ButtonGroup, ListGroup} from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import React from 'react';
 import { render } from '@testing-library/react';
-import Model from './components/model.jsx';
+import Model from './components/model';
 import axios from 'axios';
+import New from './components/new';
 
 class App extends React.Component {
 
   constructor(props){
     super(props);
     this.state={
-      layers: [[0]],
-      modelName: [''],
-      cuttable: []
+      models: [],
+      currentModel: null
     }
   };
 
   componentDidMount() {
-    axios.get('http://tesla.cs.nthu.edu.tw:32510/info')
+    axios.get('http://dashboard.tesla.cs.nthu.edu.tw:32510/info')
       .then(result => {
         console.log(result.data);
-        this.setState({layers: result.data})
+        this.setState({models: result.data})
+        if(this.state.models.length > 0){
+          this.setState({currentModel: this.state.models[0]})
+        }
       })
       .catch(err=>{
         console.log(err);
       });
-    
-    axios.get('http://tesla.cs.nthu.edu.tw:32510/name')
-      .then(result=>{
-        console.log(result.data);
-        this.setState({modelName: [result.data]});
-      })
-      .catch(err =>{
-        console.log(err);
-      });
+  };
 
-    axios.get('http://tesla.cs.nthu.edu.tw:32510/cuttable')
-    .then(result=>{
-      console.log(result.data);
-      this.setState({cuttable: result.data});
-    })
-    .catch(err =>{
-      console.log(err);
-    });
-  }
+  clickSide = (e) => {
+    console.log(e)
+    var m = this.state.models.find((m) => {return m.name == e.target.value})
+    console.log(m)
+    this.setState({currentModel: m})
+  };
 
-  renderModel(modelName){
-    return <Model modelName={modelName} layers={this.state.layers} cuttable={this.state.cuttable}/>
-  }
+  renderModel(model){
+    console.log(model)
+    return <Model modelName={model.name} layers={model.info} cuttable={model.cuttable}/>
+  };
+
+  renderSide(model, currentModel){
+    console.log(model)
+    return <ListGroup.Item action active={currentModel && currentModel.name==model.name} 
+      value={model.name} onClick={this.clickSide}>
+        {model.name}
+      </ListGroup.Item>
+  };
 
   render(){
 
-    var models = this.state.modelName.map(model=>{
-      return this.renderModel(model);
+    var sides = this.state.models.map(model=>{
+      return this.renderSide(model, this.state.currentModel);
     })
+
+    // var models = this.state.models.map(model=>{
+    //   return this.renderModel(model);
+    // })
+
+    var models = this.state.currentModel ? this.renderModel(this.state.currentModel) : ""
 
     return (
       <div>
@@ -82,8 +89,18 @@ class App extends React.Component {
             </Form>
           </Navbar.Collapse>
         </Navbar>
-        <Container>
-          {models}
+        <Container style={{marginTop: '30px'}}>
+          <Row>
+            <Col xl={3} lg={3}>
+              <ListGroup>
+                <New/>
+                {sides}
+              </ListGroup>
+            </Col>
+            <Col xl={9} lg={9}>
+              {models}
+            </Col>
+          </Row>
         </Container>
       </div>
     );
