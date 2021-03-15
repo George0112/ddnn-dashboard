@@ -2,6 +2,7 @@ import React from 'react';
 import {Button, Modal, Form} from 'react-bootstrap';
 import CutPoints from './cutPoints'
 import axios from 'axios';
+import Const from './const';
 
 class New extends React.Component{
   constructor(props){
@@ -39,12 +40,19 @@ class New extends React.Component{
   deploy = (e)=>{
     console.log(this.state.cutPoints, this.state.modelName)
     var bodyFormData = new FormData();
+    var outputPoints = []
+    if(this.state.modelName == 'vgg16'){
+      outputPoints = Const.vgg16OutputPoints;
+    }else if (this.state.modelName == 'multitask'){
+      outputPoints = Const.multitaskOutputPoints
+    }
     bodyFormData.append('model', this.state.modelName);
     bodyFormData.append('cut_points', this.state.cutPoints);
-    bodyFormData.append('output_points', this.state.outputPoints);
+    bodyFormData.append('output_points', outputPoints);
     axios.post('http://dashboard.tesla.cs.nthu.edu.tw:32510/model', bodyFormData)
     .then(e=>{
       console.log(e);
+      this.setState({show: false})
     })
     .catch(e=>{
       console.log(e);

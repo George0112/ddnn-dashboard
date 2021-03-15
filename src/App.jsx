@@ -22,6 +22,7 @@ class App extends React.Component {
 
   componentDidMount() {
     axios.get('http://dashboard.tesla.cs.nthu.edu.tw:32510/info')
+    // axios.get('http://localhost:5000/info')
       .then(result => {
         console.log(result.data);
         this.setState({models: result.data})
@@ -43,7 +44,10 @@ class App extends React.Component {
 
   renderModel(model){
     console.log(model)
-    return <Model modelName={model.name} layers={model.info} cuttable={model.cuttable}/>
+    if(model.status != "pending")
+    return <Model modelName={model.name} layers={model.info} cuttable={model.cuttable} endPoint={model.endPoint}/>
+    else
+    return <h3>Pending</h3>
   };
 
   renderSide(model, currentModel){
@@ -60,10 +64,6 @@ class App extends React.Component {
       return this.renderSide(model, this.state.currentModel);
     })
 
-    // var models = this.state.models.map(model=>{
-    //   return this.renderModel(model);
-    // })
-
     var models = this.state.currentModel ? this.renderModel(this.state.currentModel) : ""
 
     return (
@@ -74,14 +74,6 @@ class App extends React.Component {
           <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="mr-auto">
               <Nav.Link href="#home">Home</Nav.Link>
-              <Nav.Link href="#link">Link</Nav.Link>
-              <NavDropdown title="Dropdown" id="basic-nav-dropdown">
-                <NavDropdown.Item href="#action/3.1">Action</NavDropdown.Item>
-                <NavDropdown.Item href="#action/3.2">Another action</NavDropdown.Item>
-                <NavDropdown.Item href="#action/3.3">Something</NavDropdown.Item>
-                <NavDropdown.Divider />
-                <NavDropdown.Item href="#action/3.4">Separated link</NavDropdown.Item>
-              </NavDropdown>
             </Nav>
             <Form inline>
               <FormControl type="text" placeholder="Search" className="mr-sm-2" />

@@ -23,15 +23,15 @@ spec:
         name: %s
         resources:
           requests:
-            cpu: "1000m"
-          limits:
             cpu: "2000m"
+          limits:
+            cpu: "4000m"
         env:
           - name: "PYTHONUNBUFFERED"
             value: "1"
           - name: "PYTHONIOENCODING"
             value: "UTF-8"
-        command: ["python3"]
+        command: ["python"]
         args: ["run.py", "%s", "%s", "%s", %s]
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File

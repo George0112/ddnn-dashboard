@@ -13,18 +13,20 @@ class Model extends React.Component {
   }
 
   deleteModel = (e) => {
-    console.log(this.props.modelName);
-    var bodyFormData = new FormData();
-    bodyFormData.append('model', this.props.modelName);
-    axios.delete('http://dashboard.tesla.cs.nthu.edu.tw:32510/model', {
-      data: bodyFormData
-    })
-      .then(result => {
-        console.log(result.data);
+    if(window.confirm('Delete '+this.props.modelName + '?')){
+      console.log(this.props.modelName);
+      var bodyFormData = new FormData();
+      bodyFormData.append('model', this.props.modelName);
+      axios.delete('http://dashboard.tesla.cs.nthu.edu.tw:32510/model', {
+        data: bodyFormData
       })
-      .catch(err=>{
-        console.log(err);
-      });
+        .then(result => {
+          console.log(result.data);
+        })
+        .catch(err=>{
+          console.log(err);
+        });
+    }
   }
 
   render(){
@@ -39,15 +41,18 @@ class Model extends React.Component {
       <div>
         <Row>
           <Col lg={6} md={6} sm={6}>
-            {this.props.modelName}
+            <h3>{this.props.modelName}</h3>
+            <Row>
+              <a>http://tesla.cs.nthu.edu.tw/{this.props.modelName}</a>
+            </Row>
           </Col>
           <Col lg={6} md={6} sm={6}  className='float-left'>
-            <Config modelName={this.props.modelName} cuttable={this.props.cuttable}/>
+            <Config modelName={this.props.modelName}/>
             <Button variant="danger" onClick={this.deleteModel}>Delete</Button>
           </Col>
         </Row>
         <Row>
-            {pieces}
+          {pieces}
         </Row>
       </div>
     )

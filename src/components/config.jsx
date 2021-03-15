@@ -2,6 +2,7 @@ import React from 'react';
 import {Row, Col, ButtonGroup, Button, Modal, Dropdown, Card, ListGroup, DropdownButton} from 'react-bootstrap';
 import CutPoints from './cutPoints';
 import axios from 'axios';
+import Const from './const';
 
 class Config extends React.Component{
   constructor(props){
@@ -12,6 +13,14 @@ class Config extends React.Component{
       outputPoints: [-1]
     }
   };
+
+  componentDidMount(){
+    if(this.props.modelName.split('-')[0] == 'vgg16'){
+      this.setState({outputPoints: Const.vgg16OutputPoints})
+    }else if(this.props.modelName.split('-')[0] == 'multitask'){
+      this.setState({outputPoints: Const.multitaskOutputPoints})
+    }
+  }
 
   handleShow = () => {
     this.setState({show: true});
@@ -55,48 +64,7 @@ class Config extends React.Component{
     })
   }
 
-  renderCutPoints(cutPoints, cuttable){
-    console.log(cutPoints, cuttable);
-    var options = cutPoints.map(cutPoint => {
-      if(cuttable.length >0)
-        return (
-          <ListGroup.Item>
-            Layer {cutPoint}: {cuttable[cutPoint].name}
-            <Button className='float-right' value={cutPoint} onClick={this.deleteCutPoint}>Delete</Button>
-          </ListGroup.Item>
-        )
-      else
-        return;
-    });
-
-    var cuttable = cuttable.map(cut =>{
-      if(cutPoints.length > 0 && cut.index <= cutPoints[cutPoints.length-1]){
-        return;
-      }
-      return (
-        <Dropdown.Item eventKey={cut.index} onSelect={this.updateCutPoints}>{cut.index}: {cut.name}</Dropdown.Item>
-      );
-    })
-
-    return (
-      <Card style={{ width: '100%' }}>
-        <ListGroup variant="flush">
-          {options}
-        </ListGroup>
-        <Card.Body>
-          <ButtonGroup className='justify-content-between'>
-            <DropdownButton as={ButtonGroup} title="Cuttable Points" id="bg-nested-dropdown">
-              {cuttable}
-            </DropdownButton>
-          </ButtonGroup>
-        </Card.Body>
-      </Card>
-    )
-  }
-
   render(){
-
-    // var cutPoints = this.renderCutPoints(this.state.cutPoints, this.props.cuttable);
 
     return(
       <>

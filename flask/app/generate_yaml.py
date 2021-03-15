@@ -23,7 +23,10 @@ m = args.model
 flag = '"--is-first"'
 app = m + '-0'
 c = 0
-n = args.cut_point[0]
+if len(args.cut_point) > 1 or len(args.output_layer) == 1:
+  n = args.cut_point[0]
+else:
+  n = args.cut_point[0] + '", "' + '", "'.join(str(o) for o in args.output_layer) # Multiple outputs
 
 def write():
   with open("./app/yaml/%s-svc.yaml" %(app), "w") as f:
@@ -32,12 +35,19 @@ def write():
   with open("./app/yaml/%s.yaml" %(app), "w") as f:
     f.write(app_yaml %(app, app, app, app, m, m, c, n, flag))
 
+if n == '0':
+  flag='--is-last'
+  write()
+  exit()
+  
 write()
 flag = ''
 
-for idx, i in enumerate(args.cut_point):
-  c = int(args.cut_point[idx])+1 # The current cut point
-  if(idx == len(args.cut_point)-2):
+for idx, c in enumerate(args.cut_point):
+  c = int(c)+1
+  app = m + '-' + str(c)
+  print(app)
+  if(len(args.cut_point) >1 and idx == len(args.cut_point)-2):
     app = m + '-' + str(c)
     if(args.output_layer[0] != -1):
       n = args.cut_point[idx+1] + '", "' + '", "'.join(str(o) for o in args.output_layer) # Multiple outputs
@@ -47,21 +57,46 @@ for idx, i in enumerate(args.cut_point):
   elif(idx == len(args.cut_point)-1):
     print(args.output_layer)
     flag = '"--is-last"'
-    if(args.output_layer[0] == -1):
-      app=m +'-'+ str(int(args.cut_point[-1])+1)
-      n = -1 # Only 1 output
-      write()
-    else:
-      for o in args.output_layer:
-        if o == -1:
-          break
-        n = o
+
+    for o in args.output_layer:
+      n = o
+      if(args.output_layer[0] == -1):
+        app=m +'-'+ str(int(args.cut_point[-1])+1)
+      else:
         app = m+'-'+str(o)
-        write()
+      write()
   else:
     app=m +'-'+ str(c)
     n = args.cut_point[idx+1]
     write()
+
+# for idx, i in enumerate(args.cut_point):
+#   c = int(args.cut_point[idx])+1 # The current cut point
+#   if(idx == len(args.cut_point)-2):
+#     app = m + '-' + str(c)
+#     if(args.output_layer[0] != -1):
+#       n = args.cut_point[idx+1] + '", "' + '", "'.join(str(o) for o in args.output_layer) # Multiple outputs
+#     else:
+#       n = args.cut_point[idx+1]
+#     write()
+#   elif(idx == len(args.cut_point)-1):
+#     print(args.output_layer)
+#     flag = '"--is-last"'
+#     if(args.output_layer[0] == -1):
+#       app=m +'-'+ str(int(args.cut_point[-1])+1)
+#       n = -1 # Only 1 output
+#       write()
+#     else:
+#       for o in args.output_layer:
+#         if o == -1:
+#           break
+#         n = o
+#         app = m+'-'+str(o)
+#         write()
+#   else:
+#     app=m +'-'+ str(c)
+#     n = args.cut_point[idx+1]
+#     write()
 
   flag = ""
 
