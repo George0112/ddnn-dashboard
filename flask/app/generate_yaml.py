@@ -8,8 +8,11 @@ model_choices = ['vgg16', 'multitask']
 
 parser.add_argument("--model", type=str, required="True")
 parser.add_argument("--cut-point", nargs="+", default=[0, -1])
+parser.add_argument("--start-from", default="cloud")
+parser.add_argument("--devices", nargs="+", default=['cloud', 'cloud'])
 parser.add_argument("--output-layer", nargs="+", default=[-1], type=int)
 parser.add_argument("--input-size", type=int, default=224)
+
 
 args = parser.parse_args()
 
@@ -22,6 +25,7 @@ if(int(args.cut_point[-1]) > max_layer):
 m = args.model
 flag = '"--is-first"'
 app = m + '-0'
+d = args.start_from
 c = 0
 if len(args.cut_point) > 1 or len(args.output_layer) == 1:
   n = args.cut_point[0]
@@ -33,7 +37,7 @@ def write():
     f.write(svc_yaml %(app, app, app))
 
   with open("./app/yaml/%s.yaml" %(app), "w") as f:
-    f.write(app_yaml %(app, app, app, app, m, m, c, n, flag))
+    f.write(app_yaml %(app, app, app, app, d, m, m, c, n, flag))
 
 if n == '0':
   flag='--is-last'
@@ -49,6 +53,7 @@ for idx, c in enumerate(args.cut_point):
   print(app)
   if(len(args.cut_point) >1 and idx == len(args.cut_point)-2):
     app = m + '-' + str(c)
+    d = args.devices[idx]
     if(args.output_layer[0] != -1):
       n = args.cut_point[idx+1] + '", "' + '", "'.join(str(o) for o in args.output_layer) # Multiple outputs
     else:
@@ -64,41 +69,12 @@ for idx, c in enumerate(args.cut_point):
         app=m +'-'+ str(int(args.cut_point[-1])+1)
       else:
         app = m+'-'+str(o)
+      d = args.devices[-1]
       write()
   else:
     app=m +'-'+ str(c)
     n = args.cut_point[idx+1]
+    d = args.devices[idx]
     write()
 
-# for idx, i in enumerate(args.cut_point):
-#   c = int(args.cut_point[idx])+1 # The current cut point
-#   if(idx == len(args.cut_point)-2):
-#     app = m + '-' + str(c)
-#     if(args.output_layer[0] != -1):
-#       n = args.cut_point[idx+1] + '", "' + '", "'.join(str(o) for o in args.output_layer) # Multiple outputs
-#     else:
-#       n = args.cut_point[idx+1]
-#     write()
-#   elif(idx == len(args.cut_point)-1):
-#     print(args.output_layer)
-#     flag = '"--is-last"'
-#     if(args.output_layer[0] == -1):
-#       app=m +'-'+ str(int(args.cut_point[-1])+1)
-#       n = -1 # Only 1 output
-#       write()
-#     else:
-#       for o in args.output_layer:
-#         if o == -1:
-#           break
-#         n = o
-#         app = m+'-'+str(o)
-#         write()
-#   else:
-#     app=m +'-'+ str(c)
-#     n = args.cut_point[idx+1]
-#     write()
-
   flag = ""
-
-# with open("./yaml/%s-client.yaml" %(m), "w") as f:
-#   f.write(client_yaml %(m, m, m, m, m, m, args.input_size))

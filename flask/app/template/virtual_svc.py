@@ -5,9 +5,9 @@ metadata:
   name: model-route
 spec:
   hosts:
-    - 'tesla.cs.nthu.edu.tw'
+    - '*'
   gateways:
-    - multitask-gateway
+    - model-gateway
   http:
 """
 match = """

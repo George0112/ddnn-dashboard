@@ -10,11 +10,11 @@ metadata:
   namespace: default
   name: ddnn-dashboard
 rules:
-- apiGroups: ["extensions", "apps", ""]
+- apiGroups: ["extensions", "apps", "", "networking.istio.io"]
   #
   # at the HTTP level, the name of the resource for accessing Deployment
   # objects is "deployments"
-  resources: ["deployments", "pods"]
+  resources: ["deployments", "pods", "crds", "services", "virtualservices"]
   verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -45,6 +45,8 @@ spec:
   selector:
     matchLabels:
       app: dashboard
+  nodeSelector:
+    type: master
   strategy:
     rollingUpdate:
       maxSurge: 25%

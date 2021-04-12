@@ -17,7 +17,7 @@ class Model extends React.Component {
       console.log(this.props.modelName);
       var bodyFormData = new FormData();
       bodyFormData.append('model', this.props.modelName);
-      axios.delete('http://dashboard.tesla.cs.nthu.edu.tw:32510/model', {
+      axios.delete('/model', {
         data: bodyFormData
       })
         .then(result => {

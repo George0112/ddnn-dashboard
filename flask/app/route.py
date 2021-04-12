@@ -12,6 +12,8 @@ import string
 import random
 import re
 from app.template.virtual_svc import *
+import threading
+import time
 
 from app import app
 
@@ -72,14 +74,12 @@ def get_models_name():
   ret = appApi.list_namespaced_deployment('default')
   names = []
   for i in ret.items:
-    print("deployment name: %s" %(i.metadata.name))
     if i.metadata.name == 'dashboard' or not re.search(".*.....", i.metadata.name):
       continue
     elif re.search(".*-.....", i.metadata.name).group() in names:
       continue
     else:
       names.append(re.search(".*-.....", i.metadata.name).group())
-  
   return names
 
 def delete_model(model_name):
@@ -95,10 +95,9 @@ def delete_model(model_name):
       delete_service(coreApi, 'default', i.metadata.name)
       print("Delete Servuce: %s" %(i.metadata.name))
 
-def update_virtual_svc(svc):
-  names = get_models_name()
+def update_virtual_svc(svc, names):
   for n in names:
-    svc += match %(n, n)
+    svc += match %(n[0], n[1])
   with open("./app/yaml/virtual_svc.yaml", 'w') as f:
     f.write(svc)
 
@@ -109,6 +108,26 @@ def update_virtual_svc(svc):
         body=dep, namespace="default", group="networking.istio.io", 
         version="v1alpha3", plural="virtualservices", name="model-route")
 
+def get_virtual_svc():
+  k8s_apps_v1 = client.CustomObjectsApi()
+  resp = k8s_apps_v1.get_namespaced_custom_object(
+    namespace="default", group="networking.istio.io",
+    version="v1alpha3", plural="virtualservices", name="model-route")
+  return [[r['match'][0]['uri']['prefix'][1:], r['route'][0]['destination']['host'][:-2]]for r in resp['spec']['http']]
+
+def get_models_info():
+  names = get_models_name()
+  print(names)
+  result = []
+  for n in names:
+    try:
+      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/info' %(n)).text)
+      result.append({"name": n, "info": info, "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s' % (n), "status": "ready"})
+    except:
+      result.append({"name": n, "info": [[]], "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s'%(n), "status": "pending"})
+  return result
+
+
 @app.route('/names', methods=['GET'])
 def names():
   return jsonify(get_models_name())
@@ -118,53 +137,81 @@ def model():
   if request.method=='POST':
     # Retrieve inputs
     cut_points = request.form['cut_points']
-    cut_points = ast.literal_eval(cut_points)
-    if(isinstance(cut_points, int)):
-      cut_points = [cut_points]
+    cut_points = [int(c) for c in cut_points.split(',')]
     output_points = request.form['output_points']
-    output_points = ast.literal_eval(output_points)
-    if(isinstance(output_points, int)):
-      output_points = [output_points]
+    output_points = [int(o) for o in output_points.split(',')]
     model = request.form['model']
+    devices = request.form['devices']
+    devices = devices.split(',')
+    start_from = request.form['start_from']
+
     # Generate new model name
     letters = string.ascii_lowercase
     model = model.split('-')[0]+'-'+''.join(random.choice(letters) for i in range(5))
     # Generate new yaml files and deploy
-    cmd = "python3 app/generate_yaml.py --model " + model + " --cut-point " + " ".join([str(e) for e in cut_points]) + " --output-layer  " + " ".join([str(e) for e in output_points])
+    cmd = "python3 app/generate_yaml.py --model %s --cut-point %s --output-layer %s --devices %s --start-from %s" % (model, 
+      " ".join([str(e) for e in cut_points]),
+      " ".join([str(e) for e in output_points]),
+      " ".join([str(e) for e in devices]),
+      start_from)
     os.system('rm app/yaml/*')
     os.system(cmd)
     deploy_yaml()
 
     # Update istio virtual service
-    update_virtual_svc(svc)
+    update_virtual_svc(svc, [(model, model)])
 
     return model
   elif request.method == 'PUT':
     # Retrieve inputs
     cut_points = request.form['cut_points']
-    cut_points = ast.literal_eval(cut_points)
-    if(isinstance(cut_points, int)):
-      cut_points = [cut_points]
+    cut_points = [int(c) for c in cut_points.split(',')]
     output_points = request.form['output_points']
-    output_points = ast.literal_eval(output_points)
-    if(isinstance(output_points, int)):
-      output_points = [output_points]
+    output_points = [int(o) for o in output_points.split(',')]
     model = request.form['model']
-    print(cut_points, output_points, model)
-    # Delete original Deployments and Services
-    delete_model(model)
+    devices = request.form['devices'].split(',')
+    start_from = request.form['start_from']
+
+    # Find the old model name from virtual svc matching
+    match = get_virtual_svc()
+    for m in match:
+      if m[0] == model:
+        old_name = m[1]
+
     # Generate new model name
     letters = string.ascii_lowercase
-    model = model.split('-')[0]+'-'+''.join(random.choice(letters) for i in range(5))
-    print("model name: %s" % (model)) 
+    new_name = model.split('-')[0]+'-'+''.join(random.choice(letters) for i in range(5))
+    print("new model name: %s" % (new_name))
+    print("cut_points", cut_points)
+
     # Generate new yaml files and deploy
-    cmd = "python3 app/generate_yaml.py --model " + model + " --cut-point " + " ".join([str(e) for e in cut_points]) + " --output-layer  " + " ".join([str(e) for e in output_points])
+    cmd = "python3 app/generate_yaml.py --model %s --cut-point %s --output-layer %s --devices %s --start-from %s" % (new_name, 
+      " ".join([str(e) for e in cut_points]),
+      " ".join([str(e) for e in output_points]),
+      " ".join([str(e) for e in devices]),
+      start_from)
     os.system('rm app/yaml/*')
     os.system(cmd)
-
     deploy_yaml()
-    update_virtual_svc(svc)
+    print("yaml deployed", time.time())
 
+    for idx, m in enumerate(match):
+      if match[idx][0] == model:
+        match[idx][1] = new_name
+    while(True):
+      finish = 0
+      models = get_models_info()
+      for m in models:
+        if m['name'] == new_name:
+          if m['status'] == 'ready':
+            finish = 1
+      if finish:
+        break
+      print("waiting for new model to be ready", time.time())
+      time.sleep(0.5)
+    print("New model is ready", time.time())
+    update_virtual_svc(svc, match)
+    delete_model(old_name)
     return model
   elif request.method == 'DELETE':
     model = request.form['model']
@@ -173,49 +220,39 @@ def model():
 
 @app.route('/info', methods=['GET'])
 def info():
-  names = get_models_name()
-  print(names)
-  result = []
-  for n in names:
-    try:
-      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/info' %(n)).text)
-      # cuttable = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/cuttable' %(n)).text)
-      result.append({"name": n, "info": info, "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s' % (n), "status": "ready"})
-    except:
-      result.append({"name": n, "info": [[]], "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s'%(n), "status": "pending"})
-  return jsonify(result)
+  return jsonify(get_models_info())
 
 @app.route('/time', methods=['GET'])
-def time():
-  names = get_models_name()
-  print('time', names)
+def get_time():
+  names = get_virtual_svc()
   result = []
   for n in names:
     try:
-      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/time' %(n)).text)
-      print(info)
-      result.append({"name": n, "info": info})
+      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/time' %(n[1])).text)
+      result.append({"name": n[0], "info": info})
     except:
       print('Network error')
-      result.append({"name": n, "info": [[]]})
+      result.append({"name": n[0], "info": [[]]})
+  return jsonify(result)
+
+@app.route('/metrics', methods=['GET'])
+def get_metric():
+  names = get_virtual_svc()
+  result = []
+  for n in names:
+    try:
+      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/metrics' %(n[1])).text)
+      result.append({"name": n[0], "info": info})
+    except:
+      print('Network error')
+      result.append({"name": n[0], "info": [[]]})
   return jsonify(result)
 
 @app.route('/', methods=['GET'])
 def index():
   return redirect('/index.html')
 
-
-import io
-import zlib
-import numpy as np
-def uncompress_nparr(bytestring):
-    """
-    """
-    return np.load(io.BytesIO(zlib.decompress(bytestring)))
-
-@app.route('/test', methods=['POST'])
+@app.route('/test', methods=['GET'])
 def test():
-    data = request.get_data()
-    print(uncompress_nparr(data).shape)
-
-    return "test"
+  print(get_virtual_svc())
+  return jsonify(get_virtual_svc())

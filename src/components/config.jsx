@@ -35,7 +35,7 @@ class Config extends React.Component{
     bodyFormData.append('model', this.props.modelName);
     bodyFormData.append('cut_points', this.state.cutPoints);
     bodyFormData.append('output_points', this.state.outputPoints);
-    axios.put('http://dashboard.tesla.cs.nthu.edu.tw:32510/model', bodyFormData)
+    axios.put('/model', bodyFormData)
     .then(e=>{
       console.log(e);
     })
@@ -48,7 +48,21 @@ class Config extends React.Component{
 
   updateCutPoints = (e)=>{
     console.log(e);
-    this.state.cutPoints.push((e))
+    let cutPoint = parseInt(e.split('-')[0]);
+    let device = e.split('-')[1];
+    if(this.state.cutPoints.find(c => {return c.cutPoint == cutPoint})){
+      this.state.cutPoints.forEach(c=>{
+        if(c.cutPoint == cutPoint){
+          c.device = device;
+        }
+      })
+    }
+    else{
+      this.state.cutPoints.push({
+        "cutPoint": cutPoint, 
+        "device": device
+      });
+    }
     this.setState({
       cutPoints: this.state.cutPoints.map(e=>{return e;})
     })
@@ -59,7 +73,7 @@ class Config extends React.Component{
     console.log(e.target.value);
     this.setState({
       cutPoints: this.state.cutPoints.filter(c =>{
-        return c != e.target.value;
+        return c.cutPoint != e.target.value;
       })
     })
   }

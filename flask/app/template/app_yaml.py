@@ -17,15 +17,17 @@ spec:
       labels:
         app: %s
     spec:
+      nodeSelector:
+        type: %s
       containers:
       - image: chaowen/ddnn
         imagePullPolicy: Always
         name: %s
         resources:
           requests:
-            cpu: "2000m"
+            cpu: "1000m"
           limits:
-            cpu: "4000m"
+            cpu: "2000m"
         env:
           - name: "PYTHONUNBUFFERED"
             value: "1"

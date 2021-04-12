@@ -21,8 +21,7 @@ class App extends React.Component {
   };
 
   componentDidMount() {
-    axios.get('http://dashboard.tesla.cs.nthu.edu.tw:32510/info')
-    // axios.get('http://localhost:5000/info')
+    axios.get('/info')
       .then(result => {
         console.log(result.data);
         this.setState({models: result.data})
