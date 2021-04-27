@@ -82,6 +82,10 @@ def get_models_name():
       names.append(re.search(".*-.....", i.metadata.name).group())
   return names
 
+def get_services():
+  ret = coreApi.list_namespaced_service('default')
+  return [i.metadata.name for i in ret.items]
+
 def delete_model(model_name):
   # Delete all Deployments and Services with model_name
   ret = appApi.list_namespaced_deployment('default')
@@ -93,7 +97,7 @@ def delete_model(model_name):
   for i in ret.items:
     if model_name in i.metadata.name:
       delete_service(coreApi, 'default', i.metadata.name)
-      print("Delete Servuce: %s" %(i.metadata.name))
+      print("Delete Service: %s" %(i.metadata.name))
 
 def update_virtual_svc(svc, names):
   for n in names:
@@ -115,18 +119,25 @@ def get_virtual_svc():
     version="v1alpha3", plural="virtualservices", name="model-route")
   return [[r['match'][0]['uri']['prefix'][1:], r['route'][0]['destination']['host'][:-2]]for r in resp['spec']['http']]
 
-def get_models_info():
-  names = get_models_name()
-  print(names)
+def get_models_info(name=None):
   result = []
-  for n in names:
+  if not name:
+    names = get_models_name()
+    print(names)
+    for n in names:
+      try:
+        info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/info' %(n)).text)
+        result.append({"name": n, "info": info, "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s' % (n), "status": "ready"})
+      except:
+        result.append({"name": n, "info": [[]], "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s'%(n), "status": "pending"})
+    return result
+  else:
     try:
-      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/info' %(n)).text)
-      result.append({"name": n, "info": info, "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s' % (n), "status": "ready"})
+      info = json.loads(requests.get('http://%s-0.default.svc.cluster.local:5000/info' %(name)).text)
+      result.append({"name": name, "info": info, "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s' % (name), "status": "ready"})
     except:
-      result.append({"name": n, "info": [[]], "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s'%(n), "status": "pending"})
-  return result
-
+      result.append({"name": name, "info": [[]], "endPoint": 'http://tesla.cs.nthu.edu.tw:32510/%s'%(name), "status": "pending"})
+    return result
 
 @app.route('/names', methods=['GET'])
 def names():
@@ -159,7 +170,9 @@ def model():
     deploy_yaml()
 
     # Update istio virtual service
-    update_virtual_svc(svc, [(model, model)])
+    match = get_virtual_svc()
+    match.append((model, model))
+    update_virtual_svc(svc, match)
 
     return model
   elif request.method == 'PUT':
@@ -177,6 +190,24 @@ def model():
     for m in match:
       if m[0] == model:
         old_name = m[1]
+
+    info = get_models_info(name=old_name)
+    print(len(cut_points), old_name,  len(info[0]['info']))
+    if len(cut_points) == len(info[0]['info'])-1:
+      services = get_services()
+      idx = 0
+      services.sort()
+      arr = part_tuple(cut_points, output_points)
+      for s in services:
+        if old_name in s:
+          print(s)
+          print(idx)
+          requests.post('http://%s.default.svc.cluster.local:5000/layer' % (s), data={
+            "cut_point": arr[idx][0], "next_cut_point": arr[idx][1]
+          })
+          idx += 1
+      
+      return 'success'
 
     # Generate new model name
     letters = string.ascii_lowercase
@@ -220,7 +251,12 @@ def model():
 
 @app.route('/info', methods=['GET'])
 def info():
-  return jsonify(get_models_info())
+  try:
+    name = request.params['model']
+  except:
+    name=None
+  print(name)
+  return jsonify(get_models_info(name=name))
 
 @app.route('/time', methods=['GET'])
 def get_time():
@@ -256,3 +292,22 @@ def index():
 def test():
   print(get_virtual_svc())
   return jsonify(get_virtual_svc())
+
+def part_tuple(cut_points, output_points):
+  arr = []
+  arr.append((0, cut_points[0]))
+  for idx, c in enumerate(cut_points):
+    start = c+1
+    if(len(cut_points) >1 and idx == len(cut_points)-2):
+      if(output_points[0] != -1):
+        n = cut_points[idx+1] + '", "' + '", "'.join(str(o) for o in output_points) # Multiple outputs
+      else:
+        n = cut_points[idx+1]
+    elif(idx == len(cut_points)-1):
+      for o in output_points:
+        n = o
+    else:
+      n = cut_points[idx+1]
+    arr.append((start, n))
+  print(arr)
+  return arr

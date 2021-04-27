@@ -24,3 +24,9 @@ __pycache__
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Binary
+sabes
+
+# VS_code
+.vscode/
